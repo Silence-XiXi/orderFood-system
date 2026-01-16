@@ -1,0 +1,67 @@
+{
+  "name": "orderfood-server",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "install-native": "node install-native-modules.js",
+    "postinstall": "npm run install-native",
+    "migrate": "node scripts/migrateDatabase.js",
+    "init-meals": "node scripts/initMeals.js",
+    "init-settings": "node scripts/initSettings.js",
+    "init-payment-methods": "node scripts/initPaymentMethods.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "自助点单系统后端服务",
+  "engines": {
+    "node": ">=18.20.8 <19.0.0",
+    "npm": ">=9.0.0"
+  },
+  "pkg": {
+    "assets": [
+      "printer_sdk",
+      "printer_sdk/**/*",
+      "printer.config.json",
+      "node_modules/sqlite3",
+      "node_modules/sqlite3/build/Release/node_sqlite3.node",
+      "node_modules/ffi-napi",
+      "node_modules/ref-napi",
+      "node_modules/ref-struct-napi",
+      "node_modules/ref-array-napi",
+      "node_modules/iconv-lite",
+      "node_modules/sqlite3",
+      "node_modules/sqlite3/build/Release/node_sqlite3.node",
+      "database.sqlite"
+    ],
+    "scripts": [
+      "controllers/**/*.js",
+      "routes/**/*.js",
+      "services/**/*.js",
+      "utils/**/*.js",
+      "models/**/*.js",
+      "node_modules/sequelize/**/*.js",
+      "node_modules/sqlite3/**/*.js"
+    ],
+    "targets": [
+      "node18-win-x64"
+    ],
+    "outputPath": "dist"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "ffi-napi": "^4.0.3",
+    "iconv-lite": "^0.7.0",
+    "ref-array-napi": "^1.2.2",
+    "ref-napi": "^3.0.3",
+    "ref-struct-napi": "^1.1.1",
+    "sequelize": "^6.37.7",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.10"
+  }
+}

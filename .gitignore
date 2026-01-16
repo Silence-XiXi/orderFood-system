@@ -1,0 +1,12 @@
+# 依赖目录
+node_modules
+*/node_modules/
+
+# 打包目录
+dist
+
+*/public/
+*.rar
+*.7z
+
+test
