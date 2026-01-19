@@ -19,7 +19,7 @@ const http = require('http');
 const os = require('os');
 const printerService = require('./services/printerService');
 const logger = require('./utils/logger');
-const { sequelize } = require('./models');
+const { sequelize, Meal, Order, OrderItem, Settings, PaymentMethod } = require('./models');
 const { initMeals } = require('./scripts/initMeals');
 const { initSettings } = require('./scripts/initSettings');
 const { initPaymentMethods } = require('./scripts/initPaymentMethods');
@@ -39,8 +39,64 @@ async function initDatabase() {
     }
     
     // 同步数据库模型（创建表结构）
-    // 使用 alter: true 确保所有表都被创建，包括新添加的 settings 表
-    await sequelize.sync({ alter: true });
+    // 注意：migrateDatabase 已经处理了大部分同步逻辑
+    // 这里只创建缺失的表，不使用 alter 避免创建备份表
+    try {
+      // 检查是否有表缺失
+      const [allTables] = await sequelize.query(`
+        SELECT name FROM sqlite_master 
+        WHERE type='table' AND name NOT LIKE 'sqlite_%' AND name NOT LIKE '%_backup'
+      `);
+      const tableNames = allTables.map(t => t.name);
+      const requiredTables = ['meals', 'orders', 'order_items', 'settings', 'payment_methods'];
+      const missingTables = requiredTables.filter(name => !tableNames.includes(name));
+      
+      if (missingTables.length > 0) {
+        logger.info(`检测到缺失的表: ${missingTables.join(', ')}，将创建这些表`);
+        // 只创建缺失的表，不使用 alter 避免修改现有表结构
+        for (const tableName of missingTables) {
+          try {
+            switch (tableName) {
+              case 'meals':
+                await Meal.sync({ force: false });
+                break;
+              case 'orders':
+                await Order.sync({ force: false });
+                break;
+              case 'order_items':
+                await OrderItem.sync({ force: false });
+                break;
+              case 'settings':
+                await Settings.sync({ force: false });
+                break;
+              case 'payment_methods':
+                await PaymentMethod.sync({ force: false });
+                break;
+            }
+            logger.info(`✓ 已创建表: ${tableName}`);
+          } catch (tableError) {
+            logger.warn(`创建表 ${tableName} 失败:`, tableError.message);
+          }
+        }
+        
+        // 清理可能创建的备份表
+        const [backupTables] = await sequelize.query(`
+          SELECT name FROM sqlite_master 
+          WHERE type='table' AND name LIKE '%_backup'
+        `);
+        if (backupTables.length > 0) {
+          for (const table of backupTables) {
+            await sequelize.query(`DROP TABLE IF EXISTS ${table.name}`);
+            logger.info(`已清理备份表: ${table.name}`);
+          }
+        }
+      } else {
+        logger.info('所有必需表都存在，跳过 sync 操作', null, true);
+      }
+    } catch (error) {
+      logger.warn('表结构检查失败:', error.message);
+    }
+    
     logger.info('数据库表结构同步成功', null, true);
     
     // 初始化默认菜品数据

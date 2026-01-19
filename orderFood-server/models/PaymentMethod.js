@@ -26,11 +26,6 @@ module.exports = (sequelize) => {
       allowNull: true,
       comment: '英文名称'
     },
-    icon: {
-      type: DataTypes.STRING(50),
-      allowNull: true,
-      comment: '图标（emoji 或图标类名）'
-    },
     is_active: {
       type: DataTypes.BOOLEAN,
       allowNull: false,

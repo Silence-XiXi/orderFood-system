@@ -60,6 +60,11 @@ module.exports = (sequelize) => {
       type: DataTypes.TEXT,
       allowNull: true,
       comment: '打印消息'
+    },
+    daily_sequence: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: '当日序号（用于打印小票显示）'
     }
   }, {
     sequelize,

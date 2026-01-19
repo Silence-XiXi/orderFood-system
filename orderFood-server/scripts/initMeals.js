@@ -22,7 +22,6 @@ async function initMeals() {
         desc_en: 'Selected One Dish',
         price: 15.00,
         category: '主食套餐',
-        icon: '🍱',
         is_active: true,
         sort_order: 1
       },
@@ -33,7 +32,6 @@ async function initMeals() {
         desc_en: 'Selected Two Dishes',
         price: 25.00,
         category: '主食套餐',
-        icon: '🍲',
         is_active: true,
         sort_order: 2
       }

@@ -19,7 +19,6 @@ async function initPaymentMethods() {
         code: 'wechat',
         name_zh: '微信支付',
         name_en: 'WeChat Pay',
-        icon: '💚',
         is_active: true,
         sort_order: 1
       },
@@ -27,7 +26,6 @@ async function initPaymentMethods() {
         code: 'alipay',
         name_zh: '支付宝',
         name_en: 'Alipay',
-        icon: '💙',
         is_active: true,
         sort_order: 2
       },
@@ -35,7 +33,6 @@ async function initPaymentMethods() {
         code: 'visa',
         name_zh: 'Visa',
         name_en: 'Visa',
-        icon: '💳',
         is_active: true,
         sort_order: 3
       },
@@ -43,7 +40,6 @@ async function initPaymentMethods() {
         code: 'mastercard',
         name_zh: 'Mastercard',
         name_en: 'Mastercard',
-        icon: '💳',
         is_active: true,
         sort_order: 4
       },
@@ -51,7 +47,6 @@ async function initPaymentMethods() {
         code: 'octopus',
         name_zh: '八达通',
         name_en: 'Octopus',
-        icon: '🟠',
         is_active: true,
         sort_order: 5
       },
@@ -59,7 +54,6 @@ async function initPaymentMethods() {
         code: 'cash',
         name_zh: '现金',
         name_en: 'Cash',
-        icon: '💵',
         is_active: true,
         sort_order: 6
       }

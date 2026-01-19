@@ -9,6 +9,11 @@ const routes = [
     path: '/order',
     name: 'order',
     component: () => import('../views/OrderView.vue')
+  },
+  {
+    path: '/payment',
+    name: 'payment',
+    component: () => import('../views/PaymentMethodView.vue')
   }
 ];
 

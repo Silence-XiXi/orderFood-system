@@ -45,11 +45,6 @@ module.exports = (sequelize) => {
       allowNull: true,
       comment: '图片URL'
     },
-    icon: {
-      type: DataTypes.STRING(10),
-      allowNull: true,
-      comment: '图标（emoji）'
-    },
     is_active: {
       type: DataTypes.BOOLEAN,
       allowNull: false,

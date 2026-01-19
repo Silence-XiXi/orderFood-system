@@ -20,7 +20,9 @@
           :key="meal.id"
           class="meal-card"
         >
-          <div class="meal-icon">{{ meal.icon }}</div>
+          <div class="meal-icon">
+            <img :src="getMealImage(meal.id)" :alt="getMealName(meal)" />
+          </div>
           <div class="meal-info">
             <div class="meal-name">{{ getMealName(meal) }}</div>
             <div class="meal-desc">{{ getMealDesc(meal) }}</div>
@@ -48,10 +50,7 @@
         >
           <div class="cart-item-name">{{ item.name }}</div>
           <div class="quantity-control">
-            <button 
-              class="num-btn" 
-              @click="decreaseQuantity(item.id)"
-            >-</button>
+            <button class="num-btn" @click="decreaseQuantity(item.id)">-</button>
             <span class="cart-item-num">{{ item.quantity }}</span>
             <button class="num-btn" @click="increaseQuantity(item.id)">+</button>
           </div>
@@ -84,11 +83,10 @@
         </div>
         <button 
           class="pay-btn" 
-          :disabled="cartData.length === 0 || isProcessing"
+          :disabled="cartData.length === 0"
           @click="handlePayment"
         >
-          <span v-if="!isProcessing">{{ currentLanguage === 'zh' ? '立即付款' : 'Pay Now' }}</span>
-          <span v-else>{{ currentLanguage === 'zh' ? '處理中...' : 'Processing...' }}</span>
+          {{ currentLanguage === 'zh' ? '立即付款' : 'Pay Now' }}
         </button>
       </div>
     </div>
@@ -102,12 +100,24 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { orderService } from '@/api';
 import { ElMessage } from 'element-plus';
 
+// 动态导入所有套餐图片（使用 import.meta.glob 批量导入）
+const dishImagesModules = import.meta.glob('@/assets/dish/*.png', { eager: true });
+// 创建一个映射对象，key 是文件名（如 1.png），value 是图片路径
+const dishImages = {};
+Object.keys(dishImagesModules).forEach(path => {
+  const fileName = path.split('/').pop(); // 获取文件名，如 "1.png"
+  const mealId = fileName.replace('.png', ''); // 获取ID，如 "1"
+  dishImages[mealId] = dishImagesModules[path].default || dishImagesModules[path];
+});
+
+const router = useRouter();
+
 const meals = ref([]);
 const cartData = ref([]);
-const isProcessing = ref(false);
 const message = ref('');
 const messageType = ref('');
 const isLoadingMeals = ref(false);
@@ -115,16 +125,27 @@ const orderType = ref(0); // 0=堂食, 1=外賣
 const currentLanguage = ref('zh'); // 'zh' 或 'en'
 const storeName = ref(''); // 店鋪名稱
 
-// 切换语言
-const toggleLanguage = () => {
-  currentLanguage.value = currentLanguage.value === 'zh' ? 'en' : 'zh';
-  // 更新购物车中的商品名称
+// 更新购物车中所有商品的名称（根据当前语言）
+const updateCartItemNames = () => {
   cartData.value.forEach(item => {
     const meal = meals.value.find(m => m.id === item.mealId);
     if (meal) {
       item.name = getMealName(meal);
     }
   });
+  // 保存更新后的购物车数据
+  saveCartToStorage();
+};
+
+// 切换语言
+const toggleLanguage = () => {
+  currentLanguage.value = currentLanguage.value === 'zh' ? 'en' : 'zh';
+  // 保存语言设置到 localStorage
+  localStorage.setItem('app_language', currentLanguage.value);
+  // 更新购物车中的商品名称
+  updateCartItemNames();
+  // 重新加载店铺名称（根据新语言）
+  loadStoreName();
 };
 
 // 获取菜品名称（根据当前语言）
@@ -143,12 +164,51 @@ const getMealDesc = (meal) => {
   return meal.desc || '';
 };
 
+// 获取套餐图片
+const getMealImage = (mealId) => {
+  // 根据 mealId 动态获取对应的图片
+  // 图片文件名格式：1.png, 2.png, 3.png 等
+  const image = dishImages[String(mealId)];
+  
+  if (image) {
+    return image;
+  }
+  
+  // 如果找不到对应ID的图片，尝试使用第一张图片作为默认
+  return dishImages['1'] || null;
+};
+
 // 计算总价
 const totalPrice = computed(() => {
   return cartData.value.reduce((total, item) => {
     return total + (item.price * item.quantity);
   }, 0);
 });
+
+// 保存购物车数据到 localStorage
+const saveCartToStorage = () => {
+  try {
+    localStorage.setItem('order_cart_data', JSON.stringify(cartData.value));
+  } catch (error) {
+    console.warn('保存购物车数据失败:', error);
+  }
+};
+
+// 从 localStorage 恢复购物车数据
+const loadCartFromStorage = () => {
+  try {
+    const savedCart = localStorage.getItem('order_cart_data');
+    if (savedCart) {
+      cartData.value = JSON.parse(savedCart);
+      // 如果meals已经加载，更新购物车中的商品名称
+      if (meals.value.length > 0) {
+        updateCartItemNames();
+      }
+    }
+  } catch (error) {
+    console.warn('恢复购物车数据失败:', error);
+  }
+};
 
 // 加入购物车
 const addToCart = (id, name, price) => {
@@ -166,6 +226,7 @@ const addToCart = (id, name, price) => {
       mealId: id // 保存 mealId 以便语言切换时更新名称
     });
   }
+  saveCartToStorage(); // 保存到 localStorage
 };
 
 // 减少商品数量（可以减到0，自动移除）
@@ -177,6 +238,7 @@ const decreaseQuantity = (id) => {
     if (cartData.value[itemIndex].quantity <= 0) {
       cartData.value.splice(itemIndex, 1);
     }
+    saveCartToStorage(); // 保存到 localStorage
   }
 };
 
@@ -185,6 +247,7 @@ const removeItem = (id) => {
   const itemIndex = cartData.value.findIndex(item => item.id === id);
   if (itemIndex > -1) {
     cartData.value.splice(itemIndex, 1);
+    saveCartToStorage(); // 保存到 localStorage
   }
 };
 
@@ -193,60 +256,35 @@ const increaseQuantity = (id) => {
   const existingItem = cartData.value.find(item => item.id === id);
   if (existingItem) {
     existingItem.quantity += 1;
+    saveCartToStorage(); // 保存到 localStorage
   }
 };
 
-// 处理付款
-const handlePayment = async () => {
+// 处理付款 - 跳转到付款方式选择页面
+const handlePayment = () => {
   if (cartData.value.length === 0) {
     ElMessage.warning(currentLanguage.value === 'zh' ? '購物車為空，請先選擇套餐' : 'Cart is empty, please select a meal');
     return;
   }
 
-  isProcessing.value = true;
-  message.value = '';
-  messageType.value = '';
+  // 构建订单数据，传递给付款页面
+  const orderItems = cartData.value.map(item => ({
+    id: item.id,
+    name: item.name,
+    quantity: item.quantity,
+    price: item.price
+  }));
 
-  try {
-    // 构建订单数据，支持多个商品
-    const orderData = {
-      items: cartData.value.map(item => ({
-        mealId: item.id,
-        quantity: item.quantity,
-        price: item.price
-      })),
+  // 跳转到付款方式选择页面，传递订单数据
+  router.push({
+    path: '/payment',
+    query: {
+      items: encodeURIComponent(JSON.stringify(orderItems)),
       totalAmount: totalPrice.value,
-      orderType: orderType.value // 0=堂食, 1=外賣
-    };
-
-    const response = await orderService.create(orderData);
-    
-    if (response.data && response.data.success) {
-      message.value = currentLanguage.value === 'zh' 
-        ? '付款成功！正在列印小票...' 
-        : 'Payment successful! Printing receipt...';
-      messageType.value = 'success';
-      
-      // 延迟后清空购物车
-      setTimeout(() => {
-        cartData.value = [];
-        message.value = '';
-        ElMessage.success(currentLanguage.value === 'zh' 
-          ? '訂單已創建，小票已列印' 
-          : 'Order created, receipt printed');
-      }, 2000);
-    } else {
-      throw new Error(response.data?.message || (currentLanguage.value === 'zh' ? '付款失敗' : 'Payment failed'));
+      orderType: orderType.value,
+      language: currentLanguage.value
     }
-  } catch (error) {
-    console.error('付款失败:', error);
-    message.value = error.response?.data?.message || error.message || 
-      (currentLanguage.value === 'zh' ? '付款失敗，請重試' : 'Payment failed, please try again');
-    messageType.value = 'error';
-    ElMessage.error(message.value);
-  } finally {
-    isProcessing.value = false;
-  }
+  });
 };
 
 // 加载菜品列表
@@ -278,13 +316,18 @@ const loadMeals = async () => {
     ];
   } finally {
     isLoadingMeals.value = false;
+    // meals加载完成后，更新购物车中的商品名称（根据当前语言）
+    if (cartData.value.length > 0) {
+      updateCartItemNames();
+    }
   }
 };
 
-// 加载店铺名称
+// 加载店铺名称（根据当前语言）
 const loadStoreName = async () => {
   try {
-    const response = await orderService.getSettings({ key: 'store_name' });
+    const key = currentLanguage.value === 'en' ? 'store_name_en' : 'store_name_zh';
+    const response = await orderService.getSettings({ key });
     if (response.data && response.data.success) {
       const data = response.data.data;
       // 如果返回的是字符串，直接使用
@@ -293,6 +336,18 @@ const loadStoreName = async () => {
       } else if (data !== null && data !== undefined) {
         // 如果是其他类型，尝试转换为字符串
         storeName.value = String(data);
+      }
+    } else {
+      // 如果当前语言的店铺名称不存在，尝试使用另一种语言
+      const fallbackKey = currentLanguage.value === 'en' ? 'store_name_zh' : 'store_name_en';
+      const fallbackResponse = await orderService.getSettings({ key: fallbackKey });
+      if (fallbackResponse.data && fallbackResponse.data.success) {
+        const fallbackData = fallbackResponse.data.data;
+        if (typeof fallbackData === 'string') {
+          storeName.value = fallbackData;
+        } else if (fallbackData !== null && fallbackData !== undefined) {
+          storeName.value = String(fallbackData);
+        }
       }
     }
   } catch (error) {
@@ -303,6 +358,15 @@ const loadStoreName = async () => {
 };
 
 onMounted(() => {
+  // 从 localStorage 读取语言设置
+  const savedLanguage = localStorage.getItem('app_language');
+  if (savedLanguage === 'zh' || savedLanguage === 'en') {
+    currentLanguage.value = savedLanguage;
+  }
+  
+  // 从 localStorage 恢复购物车数据
+  loadCartFromStorage();
+  
   loadMeals();
   loadStoreName();
 });
@@ -318,10 +382,16 @@ onMounted(() => {
 
 .order-page {
   background-color: #f8f8f8;
-  height: 100vh;
+  height: 37.04vh;
+  width: 37.04vw;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  transform: scale(2.7);
+  transform-origin: top left;
+  position: fixed;
+  top: 0;
+  left: 0;
 }
 
 /* 顶部标题栏 */
@@ -329,10 +399,7 @@ onMounted(() => {
   background-color: #e63946;
   color: white;
   padding: 12px 15px;
-  text-align: center;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-  position: sticky;
-  top: 0;
   z-index: 10;
   flex-shrink: 0;
   display: flex;
@@ -365,7 +432,7 @@ onMounted(() => {
 .lang-switch-btn {
   position: absolute;
   right: 15px;
-  top: 50%;
+  top: 40%;
   transform: translateY(-50%);
   background-color: rgba(255, 255, 255, 0.2);
   border: 2px solid rgba(255, 255, 255, 0.5);
@@ -396,9 +463,11 @@ onMounted(() => {
   flex: 1;
   padding: 15px;
   overflow-y: auto;
+  overflow-x: hidden;
   display: grid;
   grid-template-columns: 1fr;
   gap: 15px;
+  min-height: 0;
 }
 
 /* 套餐卡片 */
@@ -418,7 +487,6 @@ onMounted(() => {
 }
 
 .meal-icon {
-  font-size: 60px;
   width: 100px;
   height: 100px;
   display: flex;
@@ -427,6 +495,13 @@ onMounted(() => {
   flex-shrink: 0;
   background-color: #f5f5f5;
   border-radius: 8px;
+  overflow: hidden;
+}
+
+.meal-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .meal-info {
@@ -537,6 +612,8 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   padding: 0;
+  line-height: 1;
+  font-weight: bold;
 }
 
 .num-btn:disabled {
@@ -708,10 +785,10 @@ onMounted(() => {
   border: 1px solid #f5c6cb;
 }
 
-/* 响应式设计 */
+/* 响应式设计 - 始终单列排列以确保完整显示 */
 @media (min-width: 768px) {
   .meal-list {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
     max-width: 1200px;
     margin: 0 auto;
     width: 100%;

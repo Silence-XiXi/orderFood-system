@@ -713,13 +713,32 @@ async function printTicket(ticketData) {
  * 打印订单小票
  * @param {Object} orderData - 订单数据
  * @param {string} orderData.order_number - 订单号
+ * @param {number} orderData.daily_sequence - 当日序号
+ * @param {number} orderData.order_type - 订单类型（0=堂食，1=外卖）
  * @param {Array} orderData.items - 订单明细数组 [{name, quantity, price, subtotal}, ...]
  * @param {number} orderData.total_amount - 订单总金额
- * @param {string} orderData.order_time - 订单时间
+ * @param {number} orderData.total_quantity - 订单总数量
+ * @param {string} orderData.order_time - 订单时间（YYYY-MM-DD HH:mm:ss）
+ * @param {string} orderData.store_name_zh - 店铺名称（中文）
+ * @param {string} orderData.store_name_en - 店铺名称（英文）
+ * @param {string} orderData.payment_type_zh - 支付类型（中文）
+ * @param {string} orderData.payment_type_en - 支付类型（英文）
  * @returns {Promise<{success: boolean, message: string}>} 打印结果
  */
 async function printOrderReceipt(orderData) {
-  const { order_number, items, total_amount, order_time } = orderData;
+  const {
+    order_number,
+    daily_sequence,
+    order_type,
+    items,
+    total_amount,
+    total_quantity,
+    order_time,
+    store_name_zh,
+    store_name_en,
+    payment_type_zh,
+    payment_type_en
+  } = orderData;
   
   // 如果 DLL 未加载，返回模拟结果
   if (!printerDll) {
@@ -778,76 +797,101 @@ async function printOrderReceipt(orderData) {
     const TRADITIONAL_CHINESE_ENCODING = 3; // 繁体中文固定使用 BIG-5
     const TEXT_ENCODING = PRINTER_CONFIG.textEncoding !== undefined ? PRINTER_CONFIG.textEncoding : 0;
     
-    // 1. 居中对齐
+    // 1. 打印店铺名称（居中）
     printerDll.Pos_Align(1);
-    
-    // 2. 打印标题
-    printText('訂單小票', TRADITIONAL_CHINESE_ENCODING, -2, 1, 1, 0, 0x08);
-    printerDll.Pos_FeedLine();
-    printText('Order Receipt', TEXT_ENCODING, -2, 1, 1, 0, 0);
-    printerDll.Pos_FeedLine();
-    printerDll.Pos_FeedLine();
-    
-    // 3. 打印分隔线
-    printText('------------------------', TEXT_ENCODING, -1, 1, 1, 0, 0);
+    if (store_name_zh) {
+      printText(store_name_zh, TRADITIONAL_CHINESE_ENCODING, -2, 1, 1, 0, 0x08);
+      printerDll.Pos_FeedLine();
+    }
+    if (store_name_en) {
+      printText(store_name_en, TEXT_ENCODING, -2, 1, 1, 0, 0);
+      printerDll.Pos_FeedLine();
+    }
     printerDll.Pos_FeedLine();
     
-    // 4. 打印订单号
-    printerDll.Pos_Align(0); // 左对齐
-    printText('訂單號碼 Order No:', TRADITIONAL_CHINESE_ENCODING, -1, 1, 1, 0, 0);
-    printerDll.Pos_FeedLine();
-    printText(order_number, TEXT_ENCODING, -1, 2, 2, 0, 0x08); // 大字体，加粗
-    printerDll.Pos_FeedLine();
+    // 2. 打印分隔线
+    printerDll.Pos_Align(0);
+    printText('------------------------------------------------------------', TEXT_ENCODING, -1, 1, 1, 0, 0);
     printerDll.Pos_FeedLine();
     
-    // 5. 打印订单明细
-    printText('訂單明細 Order Items:', TRADITIONAL_CHINESE_ENCODING, -1, 1, 1, 0, 0);
-    printerDll.Pos_FeedLine();
-    printText('------------------------', TEXT_ENCODING, -1, 1, 1, 0, 0);
-    printerDll.Pos_FeedLine();
-    
-    if (items && Array.isArray(items) && items.length > 0) {
-      items.forEach((item, index) => {
-        // 商品名称
-        printText(`${index + 1}. ${item.name}`, TEXT_ENCODING, -1, 1, 1, 0, 0);
-        printerDll.Pos_FeedLine();
-        
-        // 数量和单价
-        const quantityText = `數量 Quantity: ${item.quantity}`;
-        const priceText = `單價 Price: ¥${item.price}`;
-        printText(quantityText, TEXT_ENCODING, -1, 1, 1, 0, 0);
-        printerDll.Pos_FeedLine();
-        printText(priceText, TEXT_ENCODING, -1, 1, 1, 0, 0);
-        printerDll.Pos_FeedLine();
-        
-        // 小计
-        printText(`小計 Subtotal: ¥${item.subtotal}`, TEXT_ENCODING, -1, 1, 1, 0, 0x08); // 加粗
-        printerDll.Pos_FeedLine();
-        printerDll.Pos_FeedLine();
-      });
+    // 3. 打印序号、类型、时间、交易号
+    const seqText = daily_sequence !== undefined && daily_sequence !== null
+      ? String(daily_sequence)
+      : '';
+    if (seqText) {
+      printText(`序號： ${seqText}`, TRADITIONAL_CHINESE_ENCODING, -1, 1, 1, 0, 0);
+      printerDll.Pos_FeedLine();
     }
     
-    // 6. 打印总金额
-    printText('------------------------', TEXT_ENCODING, -1, 1, 1, 0, 0);
+    const typeTextZh = order_type === 1 ? '外賣' : '堂食';
+    printText(`類型：${typeTextZh}`, TRADITIONAL_CHINESE_ENCODING, -1, 1, 1, 0, 0);
     printerDll.Pos_FeedLine();
-    printText('總金額 Total Amount:', TRADITIONAL_CHINESE_ENCODING, -1, 1, 1, 0, 0);
+    
+    printText(`交易時間(Time): ${order_time}`, TRADITIONAL_CHINESE_ENCODING, -1, 1, 1, 0, 0);
     printerDll.Pos_FeedLine();
-    printText(`¥${total_amount}`, TEXT_ENCODING, -1, 2, 2, 0, 0x08); // 大字体，加粗
+    
+    printText(`交易號(TN): ${order_number}`, TRADITIONAL_CHINESE_ENCODING, -1, 1, 1, 0, 0);
+    printerDll.Pos_FeedLine();
+    
+    // 4. 分隔线
+    printText('------------------------------------------------------------', TEXT_ENCODING, -1, 1, 1, 0, 0);
+    printerDll.Pos_FeedLine();
+    
+    // 5. 打印表头
+    printText('     品項                數量                單價               小計', TRADITIONAL_CHINESE_ENCODING, -1, 1, 1, 0, 0);
+    printerDll.Pos_FeedLine();
+    printText('    Item               Qty             Unit Price      Amount', TEXT_ENCODING, -1, 1, 1, 0, 0);
+    printerDll.Pos_FeedLine();
+    
+    // 6. 打印订单明细
+    if (items && Array.isArray(items) && items.length > 0) {
+      items.forEach((item) => {
+        const nameCol = String(item.name || '').padEnd(16, ' ');
+        const qtyCol = String(item.quantity).padStart(4, ' ');
+        const priceCol = String(item.price).padStart(10, ' ');
+        const amountCol = String(item.subtotal).padStart(10, ' ');
+        const line = `${nameCol}${qtyCol}${priceCol}${amountCol}`;
+        printText(line, TEXT_ENCODING, -1, 1, 1, 0, 0);
+        printerDll.Pos_FeedLine();
+      });
+      printerDll.Pos_FeedLine();
+    }
+    
+    // 7. 打印合计
+    const qtyTotal = total_quantity !== undefined && total_quantity !== null
+      ? total_quantity
+      : (items || []).reduce((sum, it) => sum + (it.quantity || 0), 0);
+    const totalLine = `合計 total            ${qtyTotal}                                         $${total_amount}`;
+    printText(totalLine, TRADITIONAL_CHINESE_ENCODING, -1, 1, 1, 0, 0x08);
+    printerDll.Pos_FeedLine();
+    
+    // 8. 分隔线
+    printText('------------------------------------------------------------', TEXT_ENCODING, -1, 1, 1, 0, 0);
+    printerDll.Pos_FeedLine();
+    
+    // 9. 打印支付类型和金额
+    printText('                                    支付類型                  支付金額', TRADITIONAL_CHINESE_ENCODING, -1, 1, 1, 0, 0);
+    printerDll.Pos_FeedLine();
+    printText('                             Payment type      Payment amount', TEXT_ENCODING, -1, 1, 1, 0, 0);
     printerDll.Pos_FeedLine();
     printerDll.Pos_FeedLine();
     
-    // 7. 打印订单时间
-    printText('訂單時間 Order Time:', TRADITIONAL_CHINESE_ENCODING, -1, 1, 1, 0, 0);
+    const payTypeZh = payment_type_zh || '';
+    const payTypeEn = payment_type_en || '';
+    const payAmountLineZh = `                          ${payTypeZh}                   $${total_amount}`;
+    printText(payAmountLineZh, TRADITIONAL_CHINESE_ENCODING, -1, 1, 1, 0, 0);
     printerDll.Pos_FeedLine();
-    printText(order_time, TEXT_ENCODING, -1, 1, 1, 0, 0);
-    printerDll.Pos_FeedLine();
+    if (payTypeEn) {
+      const payAmountLineEn = `                      ${payTypeEn}`;
+      printText(payAmountLineEn, TEXT_ENCODING, -1, 1, 1, 0, 0);
+      printerDll.Pos_FeedLine();
+    }
+    
+    // 10. 分隔线
+    printText('──────────────────────────────────', TEXT_ENCODING, -1, 1, 1, 0, 0);
     printerDll.Pos_FeedLine();
     
-    // 8. 打印分隔线
-    printText('------------------------', TEXT_ENCODING, -1, 1, 1, 0, 0);
-    printerDll.Pos_FeedLine();
-    
-    // 9. 打印提示信息（居中对齐）
+    // 11. 打印提示信息（居中对齐）
     printerDll.Pos_Align(1);
     printerDll.Pos_FeedLine();
     printText('感謝您的惠顧', TRADITIONAL_CHINESE_ENCODING, -2, 1, 1, 0, 0);
@@ -855,7 +899,7 @@ async function printOrderReceipt(orderData) {
     printText('Thank You!', TEXT_ENCODING, -2, 1, 1, 0, 0);
     printerDll.Pos_FeedLine();
     
-    // 10. 进纸
+    // 12. 进纸
     printerDll.Pos_Feed_N_Line(4);
     
     // 11. 切纸
