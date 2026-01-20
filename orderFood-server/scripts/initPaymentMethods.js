@@ -40,7 +40,7 @@ async function initPaymentMethods() {
         code: 'mastercard',
         name_zh: 'Mastercard',
         name_en: 'Mastercard',
-        is_active: true,
+        is_active: false,
         sort_order: 4
       },
       {
@@ -54,7 +54,7 @@ async function initPaymentMethods() {
         code: 'cash',
         name_zh: '现金',
         name_en: 'Cash',
-        is_active: true,
+        is_active: false,
         sort_order: 6
       }
     ];

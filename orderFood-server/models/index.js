@@ -38,19 +38,37 @@ try {
 }
 
 // 创建SQLite连接
-const sequelize = new Sequelize({
-  dialect: 'sqlite',
-  storage: getDatabasePath(),
-  logging: false, // 禁用SQL查询日志输出
-  dialectModule: dialectModule // 明确指定 SQLite 驱动
-});
+let sequelize;
+try {
+  const dbPath = getDatabasePath();
+  console.log(`数据库路径: ${dbPath}`);
+  
+  sequelize = new Sequelize({
+    dialect: 'sqlite',
+    storage: dbPath,
+    logging: false, // 禁用SQL查询日志输出
+    dialectModule: dialectModule // 明确指定 SQLite 驱动
+  });
+  
+  console.log('✓ Sequelize 实例创建成功');
+} catch (error) {
+  console.error('❌ 创建 Sequelize 实例失败:', error);
+  throw error; // 抛出错误，让调用者知道
+}
 
 // 初始化模型
-const Meal = require('./Meal')(sequelize);
-const Order = require('./Order')(sequelize);
-const OrderItem = require('./OrderItem')(sequelize);
-const Settings = require('./Settings')(sequelize);
-const PaymentMethod = require('./PaymentMethod')(sequelize);
+let Meal, Order, OrderItem, Settings, PaymentMethod;
+try {
+  Meal = require('./Meal')(sequelize);
+  Order = require('./Order')(sequelize);
+  OrderItem = require('./OrderItem')(sequelize);
+  Settings = require('./Settings')(sequelize);
+  PaymentMethod = require('./PaymentMethod')(sequelize);
+  console.log('✓ 所有模型初始化成功');
+} catch (error) {
+  console.error('❌ 模型初始化失败:', error);
+  throw error; // 抛出错误，让调用者知道
+}
 
 // 建立关联关系
 // 订单和订单明细：一对多

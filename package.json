@@ -1,0 +1,32 @@
+{
+  "name": "orderFood-system",
+  "version": "1.0.0",
+  "description": "Order Food System",
+  "main": "index.js",
+  "scripts": {
+    "dev:client": "cd orderFood-client && npm run dev",
+    "dev:server": "cd orderFood-server && npm run dev",
+    "dev": "concurrently \"npm run dev:client\" \"npm run dev:server\"",
+    "install:prebuilt": "node build-scripts/install-prebuilt-modules.js",
+    "build": "node build-scripts/build.js",
+    "build:win": "node build-scripts/build.js --target=win-x64 --node=node18",
+    "build:linux": "node build-scripts/build.js --target=linux-x64 --node=node18",
+    "build:mac": "node build-scripts/build.js --target=macos-x64 --node=node18",
+    "build:mac-arm": "node build-scripts/build.js --target=macos-arm64 --node=node18",
+    "start": "cd orderFood-server && npm start"
+  },
+  "keywords": [
+    "order",
+    "food",
+    "system"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "concurrently": "^8.0.0",
+    "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "pkg": "^5.8.0"
+  }
+}

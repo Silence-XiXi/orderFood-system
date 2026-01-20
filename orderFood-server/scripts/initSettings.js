@@ -133,7 +133,7 @@ async function initSettings() {
         logger.info(`✓ 创建设置: ${setting.key} = ${setting.value}`);
       } else {
         existingCount++;
-        logger.debug(`设置已存在: ${setting.key}`);
+        // logger.debug(`设置已存在: ${setting.key}`);
       }
     }
     

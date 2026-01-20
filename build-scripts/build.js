@@ -11,6 +11,9 @@ const currentNodeVersion = process.version; // 例如: v22.11.0
 const majorVersion = parseInt(currentNodeVersion.match(/v(\d+)/)?.[1] || '18');
 let nodeVersion = args.find(arg => arg.startsWith('--node'))?.split('=')[1];
 
+// 定义服务器目录（提前定义，因为后面会用到）
+const serverDir = path.join(__dirname, '../orderFood-server');
+
 // 如果没有指定版本，根据当前 Node.js 版本自动选择
 // 注意：pkg 可能不支持某些版本，优先使用 node18（最稳定）
 if (!nodeVersion) {
@@ -40,13 +43,13 @@ if (!nodeVersion) {
 
 // 构建步骤
 console.log('========================================');
-console.log('开始构建 Queue System 可执行文件...');
+console.log('开始构建 Order Food System 可执行文件...');
 console.log('========================================\n');
 
 // 1. 构建前端
 console.log('步骤 1/5: 构建前端应用...');
 try {
-  execSync('cd queueSystem-client && npm run build', { stdio: 'inherit' });
+  execSync('cd orderFood-client && npm run build', { stdio: 'inherit' });
   console.log('✓ 前端构建完成\n');
 } catch (error) {
   console.error('✗ 前端构建失败:', error.message);
@@ -55,9 +58,8 @@ try {
 
 // 2. 准备服务器目录和数据库文件
 console.log('步骤 2/5: 准备服务器目录和数据库文件...');
-const serverDir = path.join(__dirname, '../queueSystem-server');
 const publicDir = path.join(serverDir, 'public');
-const clientDistDir = path.join(__dirname, '../queueSystem-client/dist');
+const clientDistDir = path.join(__dirname, '../orderFood-client/dist');
 const databasePath = path.join(serverDir, 'database.sqlite');
 
 // 清空旧的public目录
@@ -247,10 +249,10 @@ for (const moduleName of nativeModules) {
     
     console.warn(`   如果打包后运行出错，请尝试:`);
     console.warn(`     1. 使用预编译包（推荐）:`);
-    console.warn(`        cd queueSystem-server`);
+    console.warn(`        cd orderFood-server`);
     console.warn(`        npm install ${moduleName} --force`);
     console.warn(`     2. 或安装 Visual Studio Build Tools（包含 Windows SDK）后重新构建`);
-    console.warn(`     3. 或手动运行: cd queueSystem-server && npm rebuild ${moduleName}\n`);
+    console.warn(`     3. 或手动运行: cd orderFood-server && npm rebuild ${moduleName}\n`);
   }
 }
 
@@ -360,7 +362,7 @@ try {
   
   // 构建 pkg 命令
   const pkgTarget = `${nodeVersion}-${targetPlatform}`;
-  const outputName = targetPlatform.includes('win') ? 'queue-system.exe' : 'queue-system';
+  const outputName = targetPlatform.includes('win') ? 'orderFood-system.exe' : 'orderFood-system';
   
   // 使用绝对路径，并确保路径格式正确（Windows 使用反斜杠）
   const outputPath = path.resolve(distDir, outputName);
@@ -383,7 +385,7 @@ try {
         console.error('\n❌ 错误: 无法删除旧的可执行文件');
         console.error('   文件可能正在运行或被其他程序占用');
         console.error('\n解决方法:');
-        console.error('   1. 关闭所有正在运行的 queue-system.exe 进程');
+        console.error('   1. 关闭所有正在运行的 orderFood-system.exe 进程');
         console.error('   2. 关闭可能占用该文件的程序（如杀毒软件、文件管理器）');
         console.error('   3. 或手动删除文件: ' + outputPath);
         console.error('   4. 然后重新运行打包命令\n');
@@ -415,7 +417,7 @@ try {
   
   // 使用pkg打包，明确指定 assets 路径
   // 注意：pkg 的 assets 路径是相对于入口文件的
-  // 入口文件是 queueSystem-server/index.js，所以 public 目录在同一目录下
+  // 入口文件是 orderFood-server/index.js，所以 public 目录在同一目录下
   console.log('  正在使用 pkg 打包（这可能需要几分钟）...');
   
   // 验证 package.json 中的 pkg 配置
@@ -463,17 +465,17 @@ try {
   const sqlite3NodeFileForPkg = sqlite3NodeFile.replace(/\\/g, '/');
   
   // pkg 的 assets 路径是相对于入口文件的
-  // 入口文件是 queueSystem-server/index.js，所以 public 目录在同一目录下
+  // 入口文件是 orderFood-server/index.js，所以 public 目录在同一目录下
   // 使用相对路径（相对于 index.js）
   const publicDirRelative = 'public';
   const publicIndexHtmlRelative = 'public/index.html';
   
   // 构建 assets 参数列表
   // 注意：pkg 的 assets 路径是相对于入口文件（index.js）的
-  // 由于我们在 queueSystem-server 目录执行，相对路径应该是正确的
+  // 由于我们在 orderFood-server 目录执行，相对路径应该是正确的
   // package.json 中的配置会被自动读取，命令行参数作为补充
   const assetsList = [
-    // 使用相对路径（相对于 index.js，即 queueSystem-server 目录）
+    // 使用相对路径（相对于 index.js，即 orderFood-server 目录）
     `"${publicDirRelative}"`,              // public 目录
     `"${publicDirRelative}/**/*"`,         // public 目录下所有文件
     `"${publicIndexHtmlRelative}"`,        // 明确指定 index.html
@@ -497,7 +499,7 @@ try {
   // 命令行参数是额外的补充，确保所有文件都被包含
   const pkgCommand = `npx pkg index.js --targets ${pkgTarget} --output "${outputPathForPkg}" ${assetsList.map(a => `--assets ${a}`).join(' ')}`;
   
-  console.log('  打包命令（在 queueSystem-server 目录执行）:');
+  console.log('  打包命令（在 orderFood-server 目录执行）:');
   console.log(`    npx pkg index.js`);
   console.log(`    --targets ${pkgTarget}`);
   console.log(`    --output "${outputPathForPkg}"`);
@@ -529,7 +531,7 @@ try {
   });
   console.log('');
   console.log('  重要提示: 如果仍然报错，可能是 pkg 版本问题或路径解析问题');
-  console.log('  建议: 确保在 queueSystem-server 目录下执行 pkg 命令');
+  console.log('  建议: 确保在 orderFood-server 目录下执行 pkg 命令');
   console.log('');
   console.log('  注意: 所有资源将打包到可执行文件内部');
   console.log('  提示: 如果 sqlite3 加载失败，请将 node_modules/sqlite3 复制到可执行文件同目录\n');
@@ -539,7 +541,7 @@ try {
     // 如果失败，会捕获错误并显示详细信息
     execSync(pkgCommand, { 
       stdio: 'inherit',
-      cwd: serverDir,  // 在 queueSystem-server 目录执行
+      cwd: serverDir,  // 在 orderFood-server 目录执行
       shell: true,     // 在 Windows 上使用 shell
       maxBuffer: 10 * 1024 * 1024 // 增加缓冲区大小（10MB）
     });
@@ -557,7 +559,7 @@ try {
       
       // 检查其他可能的位置
       const possibleLocations = [
-        path.join(serverDir, outputName), // queueSystem-server 目录
+        path.join(serverDir, outputName), // orderFood-server 目录
         path.join(process.cwd(), outputName), // 当前工作目录
         path.join(__dirname, outputName) // build-scripts 目录
       ];
@@ -584,7 +586,7 @@ try {
         console.error(`  - dist 目录是否存在: ${distDir}`);
         console.error(`  - 是否有写入权限`);
         console.error(`  - pkg 命令是否成功执行`);
-        console.error(`  - 检查 queueSystem-server 目录下是否有生成的文件\n`);
+        console.error(`  - 检查 orderFood-server 目录下是否有生成的文件\n`);
       }
     }
   } catch (error) {
@@ -632,9 +634,9 @@ try {
     
     console.error('\n解决方法:');
     console.error('  1. 检查上方的详细错误信息');
-    console.error('  2. 确保所有依赖已正确安装: cd queueSystem-server && npm install');
+    console.error('  2. 确保所有依赖已正确安装: cd orderFood-server && npm install');
     console.error('  3. 尝试手动运行 pkg 命令进行调试:');
-    console.error(`     cd queueSystem-server`);
+    console.error(`     cd orderFood-server`);
     console.error(`     npx pkg index.js --targets ${pkgTarget} --output "${outputPathForPkg}"`);
     console.error('  4. 检查磁盘空间是否充足');
     console.error('  5. 检查是否有杀毒软件阻止');
@@ -673,7 +675,7 @@ try {
     }
   } catch (error) {
     console.warn('    ⚠ 复制 public 目录失败（不影响打包）:', error.message);
-    console.warn('      如果运行时出错，请手动将 queueSystem-server/public 复制到 dist/public\n');
+    console.warn('      如果运行时出错，请手动将 orderFood-server/public 复制到 dist/public\n');
   }
   
   // 自动复制 sqlite3 到 dist 目录作为备用方案
@@ -703,7 +705,7 @@ try {
     }
   } catch (error) {
     console.warn('    ⚠ 复制 sqlite3 失败（不影响打包）:', error.message);
-    console.warn('      如果运行时出错，请手动将 queueSystem-server/node_modules/sqlite3 复制到 dist/node_modules/sqlite3\n');
+    console.warn('      如果运行时出错，请手动将 orderFood-server/node_modules/sqlite3 复制到 dist/node_modules/sqlite3\n');
   }
   
   // 自动复制打印机相关原生模块到 dist 目录作为备用方案
@@ -857,7 +859,7 @@ try {
     }
   } catch (error) {
     console.warn('    ⚠ 复制 printer_sdk 失败（不影响打包）:', error.message);
-    console.warn('      如果运行时出错，请手动将 queueSystem-server/printer_sdk 复制到 dist/printer_sdk\n');
+    console.warn('      如果运行时出错，请手动将 orderFood-server/printer_sdk 复制到 dist/printer_sdk\n');
   }
   
   // 自动复制 printer.config.json 到 dist 目录（外部配置文件，用户可以修改）
@@ -877,7 +879,7 @@ try {
     }
   } catch (error) {
     console.warn('    ⚠ 复制 printer.config.json 失败（不影响打包）:', error.message);
-    console.warn('      如果运行时出错，请手动将 queueSystem-server/printer.config.json 复制到 dist/printer.config.json\n');
+    console.warn('      如果运行时出错，请手动将 orderFood-server/printer.config.json 复制到 dist/printer.config.json\n');
   }
   
 } catch (error) {
@@ -885,7 +887,7 @@ try {
   console.error('\n提示: 如果遇到原生模块问题，请尝试:');
   console.error('  1. 确保已安装所有依赖: npm install');
   console.error('  2. 重新构建原生模块:');
-  console.error('     cd queueSystem-server');
+  console.error('     cd orderFood-server');
   console.error('     npm rebuild sqlite3 ffi-napi ref-napi ref-struct-napi ref-array-napi');
   console.error(`  3. 当前 Node.js 版本: ${currentNodeVersion}`);
   console.error(`  4. 目标打包版本: ${nodeVersion}`);
@@ -910,7 +912,7 @@ try {
   }
   
   // 复制默认图片到外部目录（作为示例）
-  const sourcePicDir = path.join(__dirname, '../queueSystem-client/public/pic');
+  const sourcePicDir = path.join(__dirname, '../orderFood-client/public/pic');
   if (fs.existsSync(sourcePicDir)) {
     try {
       fs.cpSync(sourcePicDir, distPicDir, { recursive: true, force: false });
@@ -976,17 +978,16 @@ try {
   
   // 创建使用说明文件
   const usageReadmePath = path.join(distDir, '使用说明.txt');
-  const usageReadmeContent = `Queue System 使用说明
-====================
+  const usageReadmeContent = `Order Food System 使用说明
+==========================
 
 一、启动应用
 -----------
-1. 双击运行 queue-system.exe
+1. 双击运行 orderFood-system.exe
 2. 程序会自动启动服务器（默认端口: 3000）
 3. 在浏览器中访问以下地址：
-   - 取票页面: http://【IP地址】:3000/ticket
-   - 显示屏: http://【IP地址】:3000/display
-   - 叫号机: http://【IP地址】:3000/counter
+   - 点单页面: http://【IP地址】:3000/
+   - 支付页面: http://【IP地址】:3000/payment
    - 管理员: http://【IP地址】:3000/admin
 
 二、配置说明
@@ -1009,7 +1010,7 @@ try {
 -----------
 如果程序启动失败或立即退出：
 1. 双击运行 "运行诊断.bat" 进行诊断
-2. 或在命令行中运行 queue-system.exe 查看详细错误信息
+2. 或在命令行中运行 orderFood-system.exe 查看详细错误信息
 3. 查看 "README-故障排除.txt" 获取详细帮助
 
 技术支持
@@ -1023,26 +1024,26 @@ try {
   const diagnosticBatContent = `@echo off
 chcp 65001 >nul
 echo ========================================
-echo Queue System 诊断工具
+echo Order Food System 诊断工具
 echo ========================================
 echo.
 echo 此工具将帮助您诊断程序启动问题
 echo.
 
 REM 检查当前目录
-if not exist "queue-system.exe" (
-    echo [错误] 未找到 queue-system.exe
-    echo 请确保此批处理文件与 queue-system.exe 在同一目录
+if not exist "orderFood-system.exe" (
+    echo [错误] 未找到 orderFood-system.exe
+    echo 请确保此批处理文件与 orderFood-system.exe 在同一目录
     pause
     exit /b 1
 )
 
 echo [1/5] 检查可执行文件...
-if exist "queue-system.exe" (
-    echo ✓ queue-system.exe 存在
-    for %%A in (queue-system.exe) do echo   文件大小: %%~zA 字节
+if exist "orderFood-system.exe" (
+    echo ✓ orderFood-system.exe 存在
+    for %%A in (orderFood-system.exe) do echo   文件大小: %%~zA 字节
 ) else (
-    echo ✗ queue-system.exe 不存在
+    echo ✗ orderFood-system.exe 不存在
     pause
     exit /b 1
 )
@@ -1085,7 +1086,7 @@ echo.
 echo [5/5] 准备启动程序...
 echo.
 echo ========================================
-echo 正在启动 queue-system.exe...
+echo 正在启动 orderFood-system.exe...
 echo ========================================
 echo.
 echo 提示: 如果程序启动失败，错误信息将显示在下方
@@ -1095,7 +1096,7 @@ echo.
 
 REM 运行程序（不自动关闭窗口）
 cd /d "%~dp0"
-queue-system.exe
+orderFood-system.exe
 
 echo.
 echo ========================================
@@ -1110,10 +1111,10 @@ pause
   
   // 创建故障排除文档
   const troubleshootingPath = path.join(distDir, 'README-故障排除.txt');
-  const troubleshootingContent = `Queue System 故障排除指南
-==========================
+  const troubleshootingContent = `Order Food System 故障排除指南
+===============================
 
-如果双击 queue-system.exe 后程序立即退出，请按以下步骤排查：
+如果双击 orderFood-system.exe 后程序立即退出，请按以下步骤排查：
 
 一、使用诊断工具
 ---------------
@@ -1127,7 +1128,7 @@ pause
 2. 进入 dist 目录：
    cd C:\\路径\\到\\dist
 3. 运行程序：
-   queue-system.exe
+   orderFood-system.exe
 4. 查看完整的错误信息
 
 三、常见问题及解决方法
@@ -1144,7 +1145,7 @@ pause
    taskkill /PID <PID> /F
 3. 或使用其他端口:
    set PORT=8080
-   queue-system.exe
+   orderFood-system.exe
 
 问题 2: 数据库初始化失败
 ------------------------
@@ -1184,7 +1185,7 @@ pause
 
 解决方法:
 1. 检查 Windows 防火墙设置
-2. 允许 queue-system.exe 通过防火墙
+2. 允许 orderFood-system.exe 通过防火墙
 3. 或临时关闭防火墙测试
 
 四、获取详细错误信息
@@ -1196,11 +1197,11 @@ pause
 方法 2: 在命令行中运行
 1. 打开 CMD
 2. cd 到 dist 目录
-3. 运行: queue-system.exe
+3. 运行: orderFood-system.exe
 4. 查看完整错误输出
 
 方法 3: 重定向输出到文件
-queue-system.exe > error.log 2>&1
+orderFood-system.exe > error.log 2>&1
 然后查看 error.log 文件
 
 五、联系支持
@@ -1227,7 +1228,7 @@ console.log('✓ 打包完成！');
 console.log('========================================\n');
 
 // 验证最终文件
-const finalExePath = path.join(__dirname, '../dist', targetPlatform.includes('win') ? 'queue-system.exe' : 'queue-system');
+const finalExePath = path.join(__dirname, '../dist', targetPlatform.includes('win') ? 'orderFood-system.exe' : 'orderFood-system');
 if (fs.existsSync(finalExePath)) {
   const stats = fs.statSync(finalExePath);
   const fileSizeMB = (stats.size / (1024 * 1024)).toFixed(2);

@@ -7,7 +7,7 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-const serverDir = path.join(__dirname, '../queueSystem-server');
+const serverDir = path.join(__dirname, '../orderFood-server');
 
 console.log('========================================');
 console.log('安装预编译原生模块');
@@ -69,6 +69,6 @@ console.log('提示:');
 console.log('  1. 如果所有模块都成功安装，可以继续运行打包命令');
 console.log('  2. 如果部分模块失败，请:');
 console.log('     - 安装 Visual Studio Build Tools（包含 Windows SDK）');
-console.log('     - 或手动运行: cd queueSystem-server && npm rebuild <模块名>');
-console.log('  3. 验证安装: 检查 queueSystem-server/node_modules/<模块名>/build/Release/ 目录\n');
+console.log('     - 或手动运行: cd orderFood-server && npm rebuild <模块名>');
+console.log('  3. 验证安装: 检查 orderFood-server/node_modules/<模块名>/build/Release/ 目录\n');
 

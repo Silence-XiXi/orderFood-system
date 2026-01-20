@@ -22,6 +22,13 @@
   },
   "pkg": {
     "assets": [
+      "public",
+      "public/**/*",
+      "public/index.html",
+      "public/assets",
+      "public/assets/**/*",
+      "models",
+      "database.sqlite",
       "printer_sdk",
       "printer_sdk/**/*",
       "printer.config.json",
@@ -31,10 +38,7 @@
       "node_modules/ref-napi",
       "node_modules/ref-struct-napi",
       "node_modules/ref-array-napi",
-      "node_modules/iconv-lite",
-      "node_modules/sqlite3",
-      "node_modules/sqlite3/build/Release/node_sqlite3.node",
-      "database.sqlite"
+      "node_modules/iconv-lite"
     ],
     "scripts": [
       "controllers/**/*.js",
