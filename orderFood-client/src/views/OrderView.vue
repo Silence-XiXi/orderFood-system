@@ -19,18 +19,18 @@
           v-for="meal in meals" 
           :key="meal.id"
           class="meal-card"
+          @click="addToCart(meal.id, getMealName(meal), meal.price)"
         >
-          <div class="meal-icon">
-            <img :src="getMealImage(meal.id)" :alt="getMealName(meal)" />
-          </div>
           <div class="meal-info">
-            <div class="meal-name">{{ getMealName(meal) }}</div>
+            <div class="meal-name" :class="{ 'lang-zh': currentLanguage === 'zh', 'lang-en': currentLanguage === 'en' }">{{ getMealName(meal) }}</div>
             <div class="meal-desc">{{ getMealDesc(meal) }}</div>
-            <div class="meal-price">${{ meal.price }}</div>
           </div>
-          <button class="add-btn" @click="addToCart(meal.id, getMealName(meal), meal.price)">
-            + {{ currentLanguage === 'zh' ? '選餐' : 'Add' }}
-          </button>
+          <div class="meal-bottom">
+            <div class="meal-price">${{ meal.price }}</div>
+            <button class="add-btn" @click.stop="addToCart(meal.id, getMealName(meal), meal.price)">
+              +
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -272,7 +272,8 @@ const handlePayment = () => {
     id: item.id,
     name: item.name,
     quantity: item.quantity,
-    price: item.price
+    price: item.price,
+    mealId: item.mealId || item.id // 传递 mealId 以便在付款页面根据语言更新名称
   }));
 
   // 跳转到付款方式选择页面，传递订单数据
@@ -462,24 +463,56 @@ onMounted(() => {
 .meal-list {
   flex: 1;
   padding: 15px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
   display: grid;
-  grid-template-columns: 1fr;
+  grid-template-columns: 1fr 1fr;
+  grid-auto-rows: 1fr;
   gap: 15px;
   min-height: 0;
+  align-items: stretch;
+}
+
+/* 自定义菜品列表滚动条样式 - 悬停时显示 */
+.meal-list:hover {
+  scrollbar-color: #888 transparent;
+}
+
+.meal-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.meal-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.meal-list::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+  transition: background 0.3s;
+}
+
+.meal-list:hover::-webkit-scrollbar-thumb {
+  background: #888;
+}
+
+.meal-list::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 
 /* 套餐卡片 */
 .meal-card {
   background-color: white;
   border-radius: 10px;
-  padding: 15px;
+  padding: 12px;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
   display: flex;
-  align-items: center;
-  gap: 15px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 8px;
   transition: transform 0.2s;
+  height: 100%;
+  min-height: 0;
+  cursor: pointer;
 }
 
 .meal-card:hover {
@@ -506,36 +539,88 @@ onMounted(() => {
 
 .meal-info {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  min-height: 0;
+  overflow: visible;
 }
 
 .meal-name {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: bold;
   color: #333;
-  margin-bottom: 5px;
+  margin-bottom: 4px;
+  flex-shrink: 0;
+  line-height: 1.3;
+}
+
+.meal-name.lang-zh {
+  font-size: 22px;
+}
+
+.meal-name.lang-en {
+  font-size: 18px;
 }
 
 .meal-desc {
-  font-size: 14px;
+  font-size: 13px;
   color: #666;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+  flex-shrink: 1;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+}
+
+.meal-bottom {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0;
+  margin-top: auto;
 }
 
 .meal-price {
-  font-size: 22px;
+  font-size: 24px;
   color: #e63946;
   font-weight: bold;
+  flex-shrink: 0;
+  margin: 0;
 }
 
 .add-btn {
   background-color: #ffb703;
   border: none;
-  color: white;
-  padding: 8px 15px;
-  font-size: 16px;
-  border-radius: 20px;
+  color: transparent;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  margin: 0;
+  font-size: 0;
+  border-radius: 50%;
   cursor: pointer;
   flex-shrink: 0;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.add-btn::after {
+  content: '+';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -53%);
+  font-size: 22px;
+  font-weight: bold;
+  color: white;
+  line-height: 1;
 }
 
 .add-btn:hover {
@@ -545,7 +630,7 @@ onMounted(() => {
 /* 购物车 - 固定在底部 */
 .cart-section {
   background-color: white;
-  padding: 15px;
+  padding: 15px 4px 15px 15px;
   box-shadow: 0 -3px 8px rgba(0, 0, 0, 0.1);
   z-index: 10;
   flex-shrink: 0;
@@ -555,7 +640,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 10px;
+  margin-bottom: 2px;
 }
 
 .cart-title {
@@ -572,9 +657,30 @@ onMounted(() => {
 }
 
 .cart-items {
-  max-height: 120px;
+  max-height: 130px;
   overflow-y: auto;
+  overflow-x: hidden;
   margin-bottom: 10px;
+  padding-right: 15px;
+}
+
+/* 自定义滚动条样式 - 更细的滚动条 */
+.cart-items::-webkit-scrollbar {
+  width: 6px;
+}
+
+.cart-items::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.cart-items::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.cart-items::-webkit-scrollbar-thumb:hover {
+  background: #555;
 }
 
 .cart-item {
@@ -595,8 +701,8 @@ onMounted(() => {
 .quantity-control {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-right: 10px;
+  gap: 4px;
+  margin-right: 5px;
 }
 
 .num-btn {
@@ -718,6 +824,7 @@ onMounted(() => {
   justify-content: space-between;
   align-items: center;
   padding-top: 10px;
+  padding-right: 15px;
   border-top: 2px solid #eee;
 }
 
@@ -785,10 +892,10 @@ onMounted(() => {
   border: 1px solid #f5c6cb;
 }
 
-/* 响应式设计 - 始终单列排列以确保完整显示 */
+/* 响应式设计 - 始终保持两列布局 */
 @media (min-width: 768px) {
   .meal-list {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr 1fr;
     max-width: 1200px;
     margin: 0 auto;
     width: 100%;

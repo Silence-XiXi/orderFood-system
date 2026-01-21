@@ -91,6 +91,7 @@ const route = useRoute();
 
 const paymentMethods = ref([]);
 const orderItems = ref([]);
+const meals = ref([]); // 存储菜品列表，用于根据语言更新名称
 const totalAmount = ref(0);
 const orderType = ref(0);
 const currentLanguage = ref('zh');
@@ -124,6 +125,7 @@ onMounted(() => {
   
   loadPaymentMethods();
   loadStoreName();
+  loadMeals(); // 加载菜品列表
 });
 
 // 切换语言
@@ -133,6 +135,51 @@ const toggleLanguage = () => {
   localStorage.setItem('app_language', currentLanguage.value);
   // 重新加载店铺名称（根据新语言）
   loadStoreName();
+  // 更新订单项的名称（根据新语言）
+  updateOrderItemNames();
+};
+
+// 获取菜品名称（根据当前语言）
+const getMealName = (meal) => {
+  if (currentLanguage.value === 'en' && meal.nameEn) {
+    return meal.nameEn;
+  }
+  return meal.name || '';
+};
+
+// 更新订单项的名称（根据当前语言）
+const updateOrderItemNames = () => {
+  orderItems.value.forEach(item => {
+    if (item.mealId) {
+      const meal = meals.value.find(m => m.id === item.mealId);
+      if (meal) {
+        item.name = getMealName(meal);
+      }
+    }
+  });
+};
+
+// 加载菜品列表
+const loadMeals = async () => {
+  try {
+    const response = await orderService.getMeals();
+    if (response.data && Array.isArray(response.data)) {
+      meals.value = response.data.map(meal => ({
+        id: meal.id,
+        name: meal.name || meal.name_zh || '',
+        nameEn: meal.nameEn || meal.name_en || '',
+        desc: meal.desc || meal.desc_zh || '',
+        descEn: meal.descEn || meal.desc_en || '',
+        price: meal.price,
+        icon: meal.icon || '🍽️',
+        category: meal.category
+      }));
+      // 加载完成后，更新订单项的名称
+      updateOrderItemNames();
+    }
+  } catch (error) {
+    console.error('加载菜品列表失败:', error);
+  }
 };
 
 // 获取付款方式名称（根据当前语言）

@@ -10,3 +10,4 @@ dist
 *.7z
 
 test
+*.log
