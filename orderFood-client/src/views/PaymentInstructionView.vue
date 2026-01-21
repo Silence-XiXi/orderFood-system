@@ -247,7 +247,8 @@ const confirmPayment = async () => {
     // 构建订单数据
     const orderData = {
       items: orderItems.value.map(item => ({
-        mealId: item.id,
+        // 優先使用前面傳遞過來的 mealId，沒有時退回到 id
+        mealId: item.mealId !== undefined && item.mealId !== null ? item.mealId : item.id,
         quantity: item.quantity,
         price: item.price
       })),
@@ -264,11 +265,12 @@ const confirmPayment = async () => {
         : 'Payment successful! Printing receipt...';
       messageType.value = 'success';
       
-      // 清空购物车数据（订单创建成功后）
+      // 清空购物车及饮品數量數據（订单创建成功后）
       try {
         localStorage.removeItem('order_cart_data');
+        localStorage.removeItem('order_drink_quantity');
       } catch (error) {
-        console.warn('清空购物车数据失败:', error);
+        console.warn('清空购物车或饮品數量數據失败:', error);
       }
       
       // 延迟后返回订单页面

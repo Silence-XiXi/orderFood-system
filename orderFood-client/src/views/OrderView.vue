@@ -18,9 +18,16 @@
         <div 
           v-for="meal in meals" 
           :key="meal.id"
-          class="meal-card"
+          :class="['meal-card', { 'meal-card-selected': isMealSelected(meal.id) }]"
           @click="addToCart(meal.id, getMealName(meal), meal.price)"
         >
+          <!-- 右上角加購數量角標 -->
+          <div 
+            v-if="getMealQuantity(meal.id) > 0" 
+            class="meal-badge"
+          >
+            {{ getMealQuantity(meal.id) }}
+          </div>
           <div class="meal-info">
             <div class="meal-name" :class="{ 'lang-zh': currentLanguage === 'zh', 'lang-en': currentLanguage === 'en' }">{{ getMealName(meal) }}</div>
             <div class="meal-desc">{{ getMealDesc(meal) }}</div>
@@ -58,6 +65,38 @@
           <button class="delete-btn" @click="removeItem(item.id)" title="刪除"></button>
         </div>
       </div>
+      <!-- 饮品选择：即使未選餐也可單獨點飲品 -->
+      <div class="drink-selector">
+        <div class="drink-info">
+          <div class="drink-text">
+            <template v-if="currentLanguage === 'zh'">
+              飲品：各式
+              <span class="drink-brand drink-brand-cocacola">「可口可樂」</span>
+              系列汽水、
+              <span class="drink-brand drink-brand-nestle">「雀巢」</span>
+              咖啡系列、
+              <span class="drink-brand drink-brand-bonaqua">「飛雪」</span>
+              礦物質水
+            </template>
+            <template v-else>
+              Drinks: Various
+              <span class="drink-brand drink-brand-cocacola">Coca-Cola</span>
+              soft drinks,
+              <span class="drink-brand drink-brand-nestle">Nestlé</span>
+              coffee series,
+              <span class="drink-brand drink-brand-bonaqua">Bonaqua</span>
+              mineral water
+            </template>
+            <span class="drink-price-text">(${{ drinkPrice }}/{{ currentLanguage === 'zh' ? '支' : 'each' }})</span>
+          </div>
+        </div>
+        <div class="drink-control">
+          <button class="num-btn" @click="decreaseDrinkQuantity">-</button>
+          <span class="drink-quantity">{{ drinkQuantity }}</span>
+          <button class="num-btn" @click="increaseDrinkQuantity">+</button>
+          <span class="drink-total-price">${{ (drinkQuantity * drinkPrice).toFixed(2) }}</span>
+        </div>
+      </div>
       <!-- 订单类型选择器 - 暂时隐藏 -->
       <div class="order-type-selector" v-if="false">
         <div class="order-type-label">{{ currentLanguage === 'zh' ? '訂單類型：' : 'Order Type:' }}</div>
@@ -83,7 +122,7 @@
         </div>
         <button 
           class="pay-btn" 
-          :disabled="cartData.length === 0"
+          :disabled="cartData.length === 0 && drinkQuantity === 0"
           @click="handlePayment"
         >
           {{ currentLanguage === 'zh' ? '立即付款' : 'Pay Now' }}
@@ -99,7 +138,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { orderService } from '@/api';
 import { ElMessage } from 'element-plus';
@@ -124,6 +163,19 @@ const isLoadingMeals = ref(false);
 const orderType = ref(0); // 0=堂食, 1=外賣
 const currentLanguage = ref('zh'); // 'zh' 或 'en'
 const storeName = ref(''); // 店鋪名稱
+const drinkQuantity = ref(0); // 饮品数量
+const drinkPrice = 5; // 每支饮品价格
+
+// 判斷某個套餐是否已在購物車中，用於高亮顯示
+const isMealSelected = (mealId) => {
+  return cartData.value.some(item => item.id === mealId);
+};
+
+// 獲取某個套餐在購物車中的數量，用於顯示角標
+const getMealQuantity = (mealId) => {
+  const item = cartData.value.find(i => i.id === mealId);
+  return item ? item.quantity : 0;
+};
 
 // 更新购物车中所有商品的名称（根据当前语言）
 const updateCartItemNames = () => {
@@ -180,15 +232,18 @@ const getMealImage = (mealId) => {
 
 // 计算总价
 const totalPrice = computed(() => {
-  return cartData.value.reduce((total, item) => {
+  const mealTotal = cartData.value.reduce((total, item) => {
     return total + (item.price * item.quantity);
   }, 0);
+  const drinkTotal = drinkQuantity.value * drinkPrice;
+  return mealTotal + drinkTotal;
 });
 
 // 保存购物车数据到 localStorage
 const saveCartToStorage = () => {
   try {
     localStorage.setItem('order_cart_data', JSON.stringify(cartData.value));
+    localStorage.setItem('order_drink_quantity', JSON.stringify(drinkQuantity.value));
   } catch (error) {
     console.warn('保存购物车数据失败:', error);
   }
@@ -204,6 +259,11 @@ const loadCartFromStorage = () => {
       if (meals.value.length > 0) {
         updateCartItemNames();
       }
+    }
+    // 恢复饮品数量
+    const savedDrinkQuantity = localStorage.getItem('order_drink_quantity');
+    if (savedDrinkQuantity !== null) {
+      drinkQuantity.value = JSON.parse(savedDrinkQuantity);
     }
   } catch (error) {
     console.warn('恢复购物车数据失败:', error);
@@ -260,10 +320,27 @@ const increaseQuantity = (id) => {
   }
 };
 
+// 减少饮品数量
+const decreaseDrinkQuantity = () => {
+  if (drinkQuantity.value > 0) {
+    drinkQuantity.value -= 1;
+  }
+};
+
+// 增加饮品数量
+const increaseDrinkQuantity = () => {
+  drinkQuantity.value += 1;
+};
+
 // 处理付款 - 跳转到付款方式选择页面
 const handlePayment = () => {
-  if (cartData.value.length === 0) {
-    ElMessage.warning(currentLanguage.value === 'zh' ? '購物車為空，請先選擇套餐' : 'Cart is empty, please select a meal');
+  // 如果沒有任何套餐且飲品數量也為 0，才提示為空
+  if (cartData.value.length === 0 && drinkQuantity.value === 0) {
+    ElMessage.warning(
+      currentLanguage.value === 'zh'
+        ? '購物車為空，請先選擇套餐或飲品'
+        : 'Cart is empty, please select a meal or drink'
+    );
     return;
   }
 
@@ -275,6 +352,17 @@ const handlePayment = () => {
     price: item.price,
     mealId: item.mealId || item.id // 传递 mealId 以便在付款页面根据语言更新名称
   }));
+
+  // 如果选择了饮品，将饮品作为单独的商品加入订单（mealId = 0）
+  if (drinkQuantity.value > 0) {
+    orderItems.push({
+      id: 0,
+      mealId: 0,
+      name: currentLanguage.value === 'zh' ? '飲品' : 'Drinks',
+      quantity: drinkQuantity.value,
+      price: drinkPrice
+    });
+  }
 
   // 跳转到付款方式选择页面，传递订单数据
   router.push({
@@ -294,16 +382,19 @@ const loadMeals = async () => {
   try {
     const response = await orderService.getMeals();
     if (response.data && Array.isArray(response.data)) {
-      meals.value = response.data.map(meal => ({
-        id: meal.id,
-        name: meal.name || meal.name_zh || '',
-        nameEn: meal.nameEn || meal.name_en || '',
-        desc: meal.desc || meal.desc_zh || '',
-        descEn: meal.descEn || meal.desc_en || '',
-        price: meal.price,
-        icon: meal.icon || '🍽️',
-        category: meal.category
-      }));
+      // 过滤掉 id 为 0 的菜品（飲品），飲品在頁面中單獨選擇
+      meals.value = response.data
+        .filter(meal => meal.id !== 0)
+        .map(meal => ({
+          id: meal.id,
+          name: meal.name || meal.name_zh || '',
+          nameEn: meal.nameEn || meal.name_en || '',
+          desc: meal.desc || meal.desc_zh || '',
+          descEn: meal.descEn || meal.desc_en || '',
+          price: meal.price,
+          icon: meal.icon || '🍽️',
+          category: meal.category
+        }));
     }
   } catch (error) {
     console.error('加载菜品列表失败:', error);
@@ -358,6 +449,15 @@ const loadStoreName = async () => {
   }
 };
 
+// 监听饮品数量变化，自动保存
+watch(drinkQuantity, () => {
+  try {
+    localStorage.setItem('order_drink_quantity', JSON.stringify(drinkQuantity.value));
+  } catch (error) {
+    console.warn('保存饮品数量失败:', error);
+  }
+});
+
 onMounted(() => {
   // 从 localStorage 读取语言设置
   const savedLanguage = localStorage.getItem('app_language');
@@ -383,12 +483,14 @@ onMounted(() => {
 
 .order-page {
   background-color: #f8f8f8;
-  height: 37.04vh;
-  width: 37.04vw;
+  /* height: 37.04vh;
+  width: 37.04vw; */
+  height: 41.66vh;
+  width: 41.66vw;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transform: scale(2.7);
+  transform: scale(2.4);
   transform-origin: top left;
   position: fixed;
   top: 0;
@@ -513,10 +615,34 @@ onMounted(() => {
   height: 100%;
   min-height: 0;
   cursor: pointer;
+  position: relative;
 }
 
 .meal-card:hover {
   transform: scale(1.02);
+}
+
+/* 已選中套餐的高亮邊框效果 */
+.meal-card-selected {
+  border: 2px solid #e63946;
+  box-shadow: 0 4px 10px rgba(230, 57, 70, 0.3);
+}
+
+/* 套餐卡片右上角加購數量角標 */
+.meal-badge {
+  position: absolute;
+  top: 2px;   /* 往上移一點，避免遮擋英文菜品名 */
+  right: 4px;
+  min-width: 22px;
+  padding: 2px 6px;
+  border-radius: 12px;
+  background-color: #e63946;
+  color: #fff;
+  font-size: 12px;
+  font-weight: bold;
+  text-align: center;
+  line-height: 1.2;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .meal-icon {
@@ -630,7 +756,7 @@ onMounted(() => {
 /* 购物车 - 固定在底部 */
 .cart-section {
   background-color: white;
-  padding: 15px 4px 15px 15px;
+  padding: 4px 4px 15px 15px; /* 上方內邊距略微縮小，讓第一個菜品更貼近頂部 */
   box-shadow: 0 -3px 8px rgba(0, 0, 0, 0.1);
   z-index: 10;
   flex-shrink: 0;
@@ -692,6 +818,11 @@ onMounted(() => {
   border-bottom: 1px solid #eee;
 }
 
+.cart-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
 .cart-item-name {
   color: #333;
   flex: 1;
@@ -742,6 +873,72 @@ onMounted(() => {
 }
 
 /* 订单类型选择器 */
+/* 饮品选择器 */
+.drink-selector {
+  margin-bottom: 4px; /* 與總計區域的間距略微縮小 */
+  padding: 10px 0;
+  border-top: 1px solid #eee;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.drink-info {
+  flex: 1;
+}
+
+.drink-text {
+  font-size: 15px;
+  color: #333;
+  line-height: 1.5;
+}
+
+/* 飲品品牌顏色高亮 */
+.drink-brand {
+  font-weight: 600;
+}
+
+.drink-brand-cocacola {
+  color: #e63946; /* 紅色，可口可樂 */
+}
+
+.drink-brand-nestle {
+  color: #8b4513; /* 棕色，雀巢 */
+}
+
+.drink-brand-bonaqua {
+  color: #0077cc; /* 藍色，飛雪 */
+}
+
+.drink-price-text {
+  font-size: 13px;
+  color: #e63946;
+  margin-left: 5px;
+}
+
+.drink-control {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: 10px;
+  margin-right: 15px;
+}
+
+.drink-quantity {
+  font-size: 16px;
+  width: 30px;
+  text-align: center;
+}
+
+.drink-total-price {
+  color: #e63946;
+  font-weight: bold;
+  min-width: 60px;
+  text-align: right;
+  margin-left: 5px;
+  font-size: 16px;
+}
+
 .order-type-selector {
   display: flex;
   align-items: center;
@@ -823,7 +1020,7 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 10px;
+  padding-top: 6px; /* 上內邊距略微縮小，讓整體更緊湊 */
   padding-right: 15px;
   border-top: 2px solid #eee;
 }

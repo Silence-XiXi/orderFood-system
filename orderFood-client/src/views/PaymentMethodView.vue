@@ -150,7 +150,8 @@ const getMealName = (meal) => {
 // 更新订单项的名称（根据当前语言）
 const updateOrderItemNames = () => {
   orderItems.value.forEach(item => {
-    if (item.mealId) {
+    // 注意：mealId 可能为 0（飲品），因此不能用簡單的 if (item.mealId) 判斷
+    if (item.mealId !== undefined && item.mealId !== null) {
       const meal = meals.value.find(m => m.id === item.mealId);
       if (meal) {
         item.name = getMealName(meal);
@@ -291,12 +292,12 @@ const goBack = () => {
 
 .payment-page {
   background-color: #f8f8f8;
-  height: 37.04vh;
-  width: 37.04vw;
+  height: 41.66vh;
+  width: 41.66vw;
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  transform: scale(2.7);
+  transform: scale(2.4);
   transform-origin: top left;
   position: fixed;
   top: 0;

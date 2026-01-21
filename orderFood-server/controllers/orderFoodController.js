@@ -28,7 +28,15 @@ const createOrder = async (req, res) => {
     
     // 验证订单明细格式
     for (const item of items) {
-      if (!item.mealId || !item.quantity || item.price === undefined) {
+      // mealId 允许为 0（例如飲品），这里只检查 undefined / null
+      if (item.mealId === undefined || item.mealId === null || item.price === undefined) {
+        return res.status(400).json({ 
+          success: false,
+          message: '订单明细格式不正确，需要 mealId, quantity, price' 
+        });
+      }
+
+      if (item.quantity === undefined || item.quantity === null) {
         return res.status(400).json({ 
           success: false,
           message: '订单明细格式不正确，需要 mealId, quantity, price' 
