@@ -16,10 +16,17 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
+  /* 禁用触摸缩放 */
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
 .app-container {
   width: 100%;
   height: 100vh;
   overflow: hidden;
+  touch-action: none;
 }
 </style>

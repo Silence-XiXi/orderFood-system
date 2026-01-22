@@ -34,9 +34,18 @@
           </div>
           <div class="meal-bottom">
             <div class="meal-price">${{ meal.price }}</div>
-            <button class="add-btn" @click.stop="addToCart(meal.id, getMealName(meal), meal.price)">
-              +
-            </button>
+            <div class="meal-quantity-control">
+              <button 
+                class="decrease-btn" 
+                @click.stop="decreaseQuantity(meal.id)"
+                :disabled="getMealQuantity(meal.id) === 0"
+              >
+                -
+              </button>
+              <button class="add-btn" @click.stop="addToCart(meal.id, getMealName(meal), meal.price)">
+                +
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -470,6 +479,36 @@ onMounted(() => {
   
   loadMeals();
   loadStoreName();
+  
+  // 禁用触摸屏双指缩放
+  const preventZoom = (e) => {
+    // 如果触摸点超过1个，阻止默认行为（双指缩放）
+    if (e.touches && e.touches.length > 1) {
+      e.preventDefault();
+    }
+  };
+  
+  // 阻止手势缩放
+  const preventGesture = (e) => {
+    e.preventDefault();
+  };
+  
+  // 添加事件监听器
+  document.addEventListener('touchstart', preventZoom, { passive: false });
+  document.addEventListener('touchmove', preventZoom, { passive: false });
+  document.addEventListener('gesturestart', preventGesture);
+  document.addEventListener('gesturechange', preventGesture);
+  document.addEventListener('gestureend', preventGesture);
+  
+  // 阻止双击缩放
+  let lastTouchEnd = 0;
+  document.addEventListener('touchend', (e) => {
+    const now = Date.now();
+    if (now - lastTouchEnd <= 300) {
+      e.preventDefault();
+    }
+    lastTouchEnd = now;
+  }, { passive: false });
 });
 </script>
 
@@ -495,6 +534,10 @@ onMounted(() => {
   position: fixed;
   top: 0;
   left: 0;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* 顶部标题栏 */
@@ -751,6 +794,64 @@ onMounted(() => {
 
 .add-btn:hover {
   background-color: #fb8500;
+}
+
+.meal-quantity-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.decrease-btn {
+  background-color: white;
+  border: 1px solid #999;
+  color: #999;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  margin: 0;
+  font-size: 0;
+  border-radius: 50%;
+  cursor: pointer;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  position: relative;
+  transition: all 0.2s;
+}
+
+.decrease-btn::after {
+  content: '-';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -53%);
+  font-size: 22px;
+  font-weight: bold;
+  color: #999;
+  line-height: 1;
+}
+
+.decrease-btn:hover:not(:disabled) {
+  border-color: #666;
+  background-color: #f5f5f5;
+}
+
+.decrease-btn:hover:not(:disabled)::after {
+  color: #666;
+}
+
+.decrease-btn:disabled {
+  background-color: #f5f5f5;
+  border-color: #ccc;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.decrease-btn:disabled::after {
+  color: #ccc;
 }
 
 /* 购物车 - 固定在底部 */
